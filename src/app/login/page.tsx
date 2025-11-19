@@ -6,13 +6,13 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { signIn, resetPassword } from "@/lib/auth"
 import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -25,8 +25,37 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      await signIn({ email, password })
-      router.push("/dashboard")
+      // Buscar usuários cadastrados
+      const usuariosStr = localStorage.getItem("usuarios")
+      if (!usuariosStr) {
+        throw new Error("Nenhum usuário cadastrado encontrado")
+      }
+
+      const usuarios = JSON.parse(usuariosStr)
+      const usuario = usuarios.find((u: any) => u.email === email && u.senha === password)
+
+      if (!usuario) {
+        throw new Error("Email ou senha incorretos")
+      }
+
+      // Salvar usuário atual
+      localStorage.setItem("usuarioAtual", JSON.stringify(usuario))
+
+      // Se "Lembrar-me" estiver marcado, salvar flag
+      if (rememberMe) {
+        localStorage.setItem("usuarioLogado", "true")
+      }
+
+      // Verificar se já escolheu um plano (pagou)
+      const planoEscolhido = localStorage.getItem("planoEscolhido")
+      
+      if (planoEscolhido) {
+        // Já pagou - vai para área restrita
+        router.push("/area-restrita")
+      } else {
+        // Não pagou - vai para resultado/análise
+        router.push("/resultado")
+      }
     } catch (err: any) {
       setError(err.message || "Erro ao fazer login. Verifique suas credenciais.")
     } finally {
@@ -40,7 +69,8 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      await resetPassword(email)
+      // Simular envio de email
+      await new Promise(resolve => setTimeout(resolve, 1500))
       setResetSuccess(true)
     } catch (err: any) {
       setError(err.message || "Erro ao enviar email de recuperação.")
@@ -199,6 +229,16 @@ export default function LoginPage() {
             </div>
 
             <div className="flex items-center justify-between text-sm">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-[#27ae60] focus:ring-[#27ae60]"
+                />
+                <span className="text-gray-700">Lembrar-me</span>
+              </label>
+              
               <button
                 type="button"
                 onClick={() => setResetMode(true)}

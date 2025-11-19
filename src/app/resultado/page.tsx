@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { 
   CheckCircle, 
   Sparkles, 
@@ -14,8 +14,13 @@ import {
   Shield,
   Zap,
   Award,
-  BookOpen
+  BookOpen,
+  Star,
+  Users,
+  Clock,
+  BarChart
 } from "lucide-react";
+import Link from "next/link";
 
 interface PlanoRecomendado {
   titulo: string;
@@ -29,7 +34,6 @@ interface PlanoRecomendado {
 
 export default function ResultadoPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [plano, setPlano] = useState<PlanoRecomendado | null>(null);
 
@@ -38,17 +42,15 @@ export default function ResultadoPage() {
       try {
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        const renda = searchParams.get('renda') || '';
-        const tempo = searchParams.get('tempo') || '';
-        const dificuldades = searchParams.get('dificuldades')?.split(',') || [];
-        const objetivo = searchParams.get('objetivo') || '';
+        // Recuperar respostas do localStorage
+        const respostasStr = localStorage.getItem("quizRespostas");
+        if (!respostasStr) {
+          router.push("/cadastro");
+          return;
+        }
 
-        const planoPersonalizado = gerarPlanoPersonalizado({
-          renda,
-          tempo,
-          dificuldades,
-          objetivo
-        });
+        const respostas = JSON.parse(respostasStr);
+        const planoPersonalizado = gerarPlanoPersonalizado(respostas);
         setPlano(planoPersonalizado);
       } catch (err) {
         console.error("Erro ao carregar dados:", err);
@@ -58,10 +60,13 @@ export default function ResultadoPage() {
     };
 
     loadData();
-  }, [searchParams]);
+  }, [router]);
 
-  const gerarPlanoPersonalizado = (data: any): PlanoRecomendado => {
-    const { renda, tempo, dificuldades, objetivo } = data;
+  const gerarPlanoPersonalizado = (respostas: Record<number, string>): PlanoRecomendado => {
+    const situacao = respostas[1] || "";
+    const objetivo = respostas[2] || "";
+    const controle = respostas[3] || "";
+    const renda = respostas[4] || "";
 
     let titulo = "Seu Plano Personalizado MyMoneyIA";
     let descricao = "";
@@ -71,31 +76,14 @@ export default function ResultadoPage() {
     let planoSugerido: "mensal" | "anual" | "vitalicio" = "anual";
     let motivoAssinatura = "";
 
-    if (dificuldades.includes("dividas")) {
+    // Análise da situação financeira
+    if (situacao.includes("dívidas")) {
       problemasIdentificados.push("Você está enfrentando dívidas que estão comprometendo sua saúde financeira");
-    }
-    if (dificuldades.includes("nao-sei-onde-gasto")) {
-      problemasIdentificados.push("Falta de visibilidade sobre seus gastos está impedindo você de tomar decisões financeiras conscientes");
-    }
-    if (dificuldades.includes("nao-sobra")) {
-      problemasIdentificados.push("O dinheiro acaba antes do fim do mês, criando um ciclo de estresse financeiro constante");
-    }
-    if (dificuldades.includes("sem-controle")) {
-      problemasIdentificados.push("Compras por impulso estão sabotando seus objetivos financeiros de longo prazo");
-    }
-    if (dificuldades.includes("planilhas-complicadas")) {
-      problemasIdentificados.push("Ferramentas complexas estão te impedindo de manter uma organização financeira consistente");
-    }
-    if (dificuldades.includes("sem-metas")) {
-      problemasIdentificados.push("Sem metas claras, você está navegando sem direção em sua vida financeira");
-    }
-
-    if (dificuldades.includes("dividas")) {
       titulo = "Plano de Eliminação de Dívidas";
       descricao = "Nossa IA identificou que você precisa de um plano estruturado para sair das dívidas de forma organizada e sustentável.";
       acoes = [
         "Liste todas as suas dívidas com valores e juros",
-        "Priorize as dívidas com maiores juros primeiro",
+        "Priorize as dívidas com maiores juros primeiro (método avalanche)",
         "Crie um orçamento realista com foco em pagamento de dívidas",
         "Negocie descontos e prazos com credores",
         "Acompanhe seu progresso semanalmente"
@@ -107,24 +95,9 @@ export default function ResultadoPage() {
         "Celebre cada dívida quitada para manter motivação"
       ];
       motivoAssinatura = "Com o MyMoneyIA, você terá uma planilha inteligente que automatiza o rastreamento de dívidas, calcula a melhor estratégia de pagamento e te mantém motivado com visualizações do seu progresso. Nossa IA analisa suas finanças e sugere cortes estratégicos que não comprometem sua qualidade de vida.";
-    } else if (dificuldades.includes("nao-sei-onde-gasto")) {
-      titulo = "Plano de Clareza Financeira Total";
-      descricao = "Nossa IA detectou que você precisa de visibilidade completa dos seus gastos para identificar vazamentos financeiros.";
-      acoes = [
-        "Registre TODOS os gastos por 30 dias",
-        "Categorize automaticamente com nossa planilha IA",
-        "Identifique os 3 maiores vazamentos de dinheiro",
-        "Estabeleça limites por categoria",
-        "Revise semanalmente seus gastos"
-      ];
-      dicas = [
-        "Use notificações para lembrar de registrar gastos",
-        "Analise padrões de consumo por dia da semana",
-        "Identifique gastos emocionais vs necessários",
-        "Crie alertas quando ultrapassar limites"
-      ];
-      motivoAssinatura = "O MyMoneyIA categoriza automaticamente seus gastos usando inteligência artificial, identifica padrões ocultos e te mostra exatamente para onde seu dinheiro está indo. Você terá dashboards visuais que transformam números confusos em insights claros e acionáveis.";
-    } else if (dificuldades.includes("nao-sobra")) {
+      planoSugerido = "anual";
+    } else if (situacao.includes("não sobra nada")) {
+      problemasIdentificados.push("O dinheiro acaba antes do fim do mês, criando um ciclo de estresse financeiro constante");
       titulo = "Plano de Economia Automática";
       descricao = "Nossa IA identificou que você precisa implementar o método 'pague-se primeiro' para criar sobras consistentes.";
       acoes = [
@@ -141,52 +114,70 @@ export default function ResultadoPage() {
         "Comemore marcos de economia alcançados"
       ];
       motivoAssinatura = "Com o MyMoneyIA, você configura metas de economia automáticas e a IA te ajuda a encontrar oportunidades de corte de gastos sem sacrificar o que realmente importa. Nosso sistema de gamificação te mantém motivado a poupar cada vez mais.";
-    } else if (dificuldades.includes("sem-controle")) {
-      titulo = "Plano de Controle de Impulsos";
-      descricao = "Nossa IA detectou que você precisa de barreiras inteligentes para desenvolver consciência financeira.";
-      acoes = [
-        "Implemente a regra das 24 horas para compras não essenciais",
-        "Remova cartões salvos de sites de compra",
-        "Crie uma lista de desejos com prioridades",
-        "Estabeleça um valor mensal para 'gastos livres'",
-        "Identifique gatilhos emocionais de compra"
-      ];
-      dicas = [
-        "Pergunte-se: 'Preciso ou quero?' antes de comprar",
-        "Evite shopping e sites de compra quando estressado",
-        "Use dinheiro físico para gastos variáveis",
-        "Recompense-se com experiências, não produtos"
-      ];
-      motivoAssinatura = "O MyMoneyIA te envia alertas inteligentes antes de você ultrapassar seus limites, analisa seus padrões de compra impulsiva e sugere alternativas saudáveis. Nossa IA aprende com seus comportamentos e te ajuda a criar hábitos financeiros sustentáveis.";
-    } else {
-      titulo = "Plano de Organização Financeira Completa";
-      descricao = "Nossa IA criou um sistema simples e sustentável para estruturar suas finanças do zero.";
-      acoes = [
-        "Configure sua planilha MyMoneyIA personalizada",
-        "Registre sua situação financeira atual",
-        "Defina metas SMART (específicas, mensuráveis, alcançáveis)",
-        "Crie categorias de gastos que façam sentido para você",
-        "Estabeleça uma rotina semanal de revisão"
-      ];
-      dicas = [
-        "Comece simples e aumente complexidade gradualmente",
-        "Seja consistente, não perfeito",
-        "Ajuste o plano conforme aprende sobre seus hábitos",
-        "Compartilhe metas com alguém para accountability"
-      ];
-      motivoAssinatura = "O MyMoneyIA oferece uma planilha inteligente que se adapta ao seu estilo de vida, com automações que economizam horas do seu tempo. Nossa IA personaliza recomendações baseadas no seu perfil único e te guia passo a passo na jornada de organização financeira.";
-    }
-
-    if (objetivo === "sair-dividas") {
-      planoSugerido = "anual";
-    } else if (objetivo === "criar-reserva") {
-      planoSugerido = "vitalicio";
-    } else if (objetivo === "economizar") {
-      planoSugerido = "anual";
-    }
-
-    if (renda === "ate-2000" || renda === "2000-4000") {
       planoSugerido = "mensal";
+    } else if (situacao.includes("não tenho controle")) {
+      problemasIdentificados.push("Falta de controle sobre os gastos está impedindo você de alcançar seus objetivos financeiros");
+      titulo = "Plano de Controle Financeiro Total";
+      descricao = "Nossa IA detectou que você precisa de um sistema simples e eficaz para controlar seus gastos.";
+      acoes = [
+        "Registre TODOS os gastos por 30 dias",
+        "Categorize automaticamente com nossa planilha IA",
+        "Identifique os 3 maiores vazamentos de dinheiro",
+        "Estabeleça limites por categoria",
+        "Revise semanalmente seus gastos"
+      ];
+      dicas = [
+        "Use notificações para lembrar de registrar gastos",
+        "Analise padrões de consumo por dia da semana",
+        "Identifique gastos emocionais vs necessários",
+        "Crie alertas quando ultrapassar limites"
+      ];
+      motivoAssinatura = "O MyMoneyIA categoriza automaticamente seus gastos usando inteligência artificial, identifica padrões ocultos e te mostra exatamente para onde seu dinheiro está indo. Você terá dashboards visuais que transformam números confusos em insights claros e acionáveis.";
+      planoSugerido = "anual";
+    } else {
+      problemasIdentificados.push("Você já tem uma base financeira, mas pode otimizar ainda mais seus resultados");
+      titulo = "Plano de Otimização Financeira";
+      descricao = "Nossa IA identificou que você está no caminho certo e pode acelerar seus resultados com estratégias avançadas.";
+      acoes = [
+        "Revise e otimize seu orçamento atual",
+        "Identifique oportunidades de investimento",
+        "Automatize suas economias e investimentos",
+        "Defina metas de longo prazo mais ambiciosas",
+        "Diversifique suas fontes de renda"
+      ];
+      dicas = [
+        "Aumente gradualmente sua taxa de poupança",
+        "Estude sobre investimentos de baixo risco",
+        "Crie múltiplas fontes de renda passiva",
+        "Revise seu plano trimestralmente"
+      ];
+      motivoAssinatura = "O MyMoneyIA oferece análises avançadas e recomendações personalizadas para quem já tem controle financeiro e quer ir além. Nossa IA identifica oportunidades de otimização que você pode estar perdendo e sugere estratégias para acelerar seu crescimento patrimonial.";
+      planoSugerido = "vitalicio";
+    }
+
+    // Análise do controle
+    if (controle.includes("Não controlo")) {
+      problemasIdentificados.push("Falta de visibilidade sobre seus gastos está impedindo você de tomar decisões financeiras conscientes");
+    } else if (controle.includes("Tento controlar mentalmente")) {
+      problemasIdentificados.push("Controle mental não é suficiente - você precisa de um sistema confiável");
+    } else if (controle.includes("planilhas")) {
+      problemasIdentificados.push("Planilhas manuais são trabalhosas e difíceis de manter consistentemente");
+    }
+
+    // Análise do objetivo
+    if (objetivo.includes("Sair das dívidas")) {
+      planoSugerido = "anual";
+    } else if (objetivo.includes("reserva de emergência")) {
+      planoSugerido = "vitalicio";
+    } else if (objetivo.includes("Investir")) {
+      planoSugerido = "vitalicio";
+    }
+
+    // Ajuste baseado na renda
+    if (renda.includes("Até R$ 2.000") || renda.includes("R$ 2.001 a R$ 5.000")) {
+      planoSugerido = "mensal";
+    } else if (renda.includes("Acima de R$ 10.000")) {
+      planoSugerido = "vitalicio";
     }
 
     return {
@@ -208,13 +199,20 @@ export default function ResultadoPage() {
           preco: "R$ 27",
           periodo: "/mês",
           economia: null,
+          cor: "blue",
           beneficios: [
             "Planilha Inteligente MyMoneyIA",
-            "E-book: 50 Dicas Financeiras (GRÁTIS)",
             "Categorização automática com IA",
-            "Dashboard completo",
+            "Dashboard completo de gastos",
             "Metas personalizadas",
+            "Chat com IA 24/7",
             "Suporte por email"
+          ],
+          detalhes: [
+            "Controle completo de receitas e despesas",
+            "Gráficos e relatórios visuais",
+            "Alertas de gastos excessivos",
+            "Sincronização em nuvem"
           ]
         };
       case "anual":
@@ -223,14 +221,22 @@ export default function ResultadoPage() {
           preco: "R$ 177",
           periodo: "/ano",
           economia: "Economize R$ 147 + E-book Grátis",
+          cor: "green",
           beneficios: [
             "Tudo do Plano Básico",
             "E-book: 50 Dicas Financeiras (GRÁTIS)",
-            "Análise mensal detalhada",
+            "Análise mensal detalhada por IA",
             "Recomendações personalizadas",
             "Biblioteca de prompts financeiros",
             "Suporte prioritário",
-            "Atualizações vitalícias"
+            "Atualizações vitalícias",
+            "Planejamento de investimentos"
+          ],
+          detalhes: [
+            "Previsões financeiras com IA",
+            "Simulador de cenários",
+            "Comparativo mensal de performance",
+            "Relatórios avançados"
           ]
         };
       case "vitalicio":
@@ -239,17 +245,33 @@ export default function ResultadoPage() {
           preco: "R$ 347",
           periodo: "pagamento único",
           economia: "Economize R$ 300+ E-book Grátis",
+          cor: "purple",
           beneficios: [
             "Tudo do Plano Premium",
             "E-book: 50 Dicas Financeiras (GRÁTIS)",
-            "Acesso vitalício",
-            "Consultoria financeira mensal",
+            "Acesso vitalício sem mensalidades",
+            "Consultoria VIP mensal com IA especialista",
             "Novos recursos em primeira mão",
-            "Comunidade exclusiva",
-            "Garantia estendida"
+            "Garantia estendida",
+            "Suporte VIP 24/7",
+            "Análises trimestrais personalizadas"
+          ],
+          detalhes: [
+            "Sessões mensais com IA financeira avançada",
+            "Estratégias avançadas de investimento",
+            "Planejamento patrimonial completo",
+            "Acesso a webinars exclusivos"
           ]
         };
     }
+  };
+
+  const handleEscolherPlano = (tipo: "mensal" | "anual" | "vitalicio") => {
+    // Salvar plano escolhido
+    localStorage.setItem("planoEscolhido", tipo);
+    
+    // Redirecionar para área restrita (simulando pós-pagamento)
+    router.push("/area-restrita");
   };
 
   if (loading) {
@@ -272,6 +294,14 @@ export default function ResultadoPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white py-12 px-4 sm:px-6 lg:px-8">
+      {/* Header */}
+      <header className="max-w-7xl mx-auto mb-8">
+        <Link href="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-[#27ae60] transition-colors">
+          <DollarSign className="w-6 h-6" />
+          <span className="font-semibold">MyMoneyIA</span>
+        </Link>
+      </header>
+
       <div className="max-w-5xl mx-auto">
         {/* Header de Sucesso */}
         <div className="text-center mb-12">
@@ -371,85 +401,71 @@ export default function ResultadoPage() {
                   BÔNUS: E-book de Dicas Financeiras
                 </h3>
                 <p className="text-gray-700 leading-relaxed">
-                  Todos os planos agora incluem nosso e-book exclusivo com 50 dicas práticas para transformar sua vida financeira. Valor: R$ 47 - <span className="font-bold text-purple-600">GRÁTIS</span> na sua assinatura!
+                  Os planos Premium e Elite incluem nosso e-book exclusivo com 50 dicas práticas para transformar sua vida financeira. Valor: R$ 47 - <span className="font-bold text-purple-600">GRÁTIS</span> na sua assinatura!
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Plano Recomendado */}
-        <div className="bg-gradient-to-br from-[#27ae60] to-[#1d3557] rounded-3xl shadow-2xl p-8 sm:p-12 text-white mb-8">
-          <div className="text-center mb-8">
-            <Award className="w-16 h-16 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold mb-2">Plano Recomendado Para Você</h2>
-            <p className="text-white/90">
-              Baseado no seu perfil e objetivos
-            </p>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mb-6">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">{planoInfo.nome}</h3>
-              <div className="flex items-baseline justify-center gap-2">
-                <span className="text-5xl font-bold">{planoInfo.preco}</span>
-                <span className="text-xl text-white/80">{planoInfo.periodo}</span>
-              </div>
-              {planoInfo.economia && (
-                <p className="text-[#a8e6cf] font-semibold mt-2">{planoInfo.economia}</p>
-              )}
-            </div>
-
-            <div className="space-y-3 mb-8">
-              {planoInfo.beneficios.map((beneficio, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-[#a8e6cf] flex-shrink-0" />
-                  <span className="text-white/90">{beneficio}</span>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => window.open('https://pay.kiwify.com.br/seu-link-aqui', '_blank')}
-              className="w-full bg-white text-[#1d3557] py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all hover:scale-105 flex items-center justify-center gap-2"
-            >
-              Começar Agora
-              <ArrowRight size={20} />
-            </button>
-          </div>
-
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 text-sm text-white/80">
-              <Shield size={16} />
-              <span>Garantia de 7 dias - 100% do dinheiro de volta</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Outros Planos */}
-        <div className="text-center mb-8">
-          <h3 className="text-2xl font-bold text-[#1d3557] mb-6">
-            Ou escolha outro plano
-          </h3>
+        {/* Comparação de Planos */}
+        <div className="mb-12">
+          <h2 className="text-3xl font-bold text-[#1d3557] text-center mb-8">
+            Escolha o Plano Ideal Para Você
+          </h2>
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {(["mensal", "anual", "vitalicio"] as const).map((tipo) => {
-              if (tipo === plano.planoSugerido) return null;
               const info = getPlanoInfo(tipo);
+              const isRecomendado = tipo === plano.planoSugerido;
+              
               return (
-                <div key={tipo} className="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-200 hover:border-[#27ae60] transition-all">
-                  <h4 className="text-xl font-bold text-[#1d3557] mb-2">{info.nome}</h4>
-                  <div className="flex items-baseline justify-center gap-1 mb-4">
-                    <span className="text-3xl font-bold text-[#27ae60]">{info.preco}</span>
-                    <span className="text-sm text-gray-600">{info.periodo}</span>
-                  </div>
-                  {info.economia && (
-                    <p className="text-sm text-[#27ae60] font-semibold mb-4">{info.economia}</p>
+                <div 
+                  key={tipo} 
+                  className={`bg-white rounded-2xl shadow-xl p-6 border-2 transition-all hover:scale-105 ${
+                    isRecomendado 
+                      ? "border-[#27ae60] ring-4 ring-[#27ae60]/20" 
+                      : "border-gray-200"
+                  }`}
+                >
+                  {isRecomendado && (
+                    <div className="bg-[#27ae60] text-white text-center py-2 px-4 rounded-full text-sm font-bold mb-4">
+                      ⭐ RECOMENDADO PARA VOCÊ
+                    </div>
                   )}
+                  
+                  <h3 className="text-2xl font-bold text-[#1d3557] mb-2 text-center">
+                    {info.nome}
+                  </h3>
+                  
+                  <div className="text-center mb-4">
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className="text-4xl font-bold text-[#27ae60]">{info.preco}</span>
+                      <span className="text-sm text-gray-600">{info.periodo}</span>
+                    </div>
+                    {info.economia && (
+                      <p className="text-sm text-[#27ae60] font-semibold mt-2">{info.economia}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-3 mb-6">
+                    {info.beneficios.map((beneficio, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <CheckCircle className="w-5 h-5 text-[#27ae60] flex-shrink-0 mt-0.5" />
+                        <span className="text-sm text-gray-700">{beneficio}</span>
+                      </div>
+                    ))}
+                  </div>
+
                   <button
-                    onClick={() => window.open('https://pay.kiwify.com.br/seu-link-aqui', '_blank')}
-                    className="w-full bg-gray-100 text-[#1d3557] py-3 rounded-xl font-semibold hover:bg-[#27ae60] hover:text-white transition-all"
+                    onClick={() => handleEscolherPlano(tipo)}
+                    className={`w-full py-3 rounded-xl font-bold transition-all ${
+                      isRecomendado
+                        ? "bg-gradient-to-r from-[#27ae60] to-[#1d3557] text-white hover:shadow-xl"
+                        : "bg-gray-100 text-[#1d3557] hover:bg-[#27ae60] hover:text-white"
+                    }`}
                   >
-                    Escolher
+                    Escolher Plano
                   </button>
                 </div>
               );
@@ -457,52 +473,13 @@ export default function ResultadoPage() {
           </div>
         </div>
 
-        {/* E-book Separado */}
-        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl shadow-xl p-8 sm:p-12 border-2 border-purple-200">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-bold mb-4">
-              <Award size={16} />
-              OFERTA ESPECIAL
-            </div>
-            <h2 className="text-3xl font-bold text-[#1d3557] mb-4">
-              Prefere apenas o E-book?
-            </h2>
-            <p className="text-lg text-gray-700">
-              Adquira nosso guia completo separadamente com desconto exclusivo
-            </p>
-          </div>
-
-          <div className="flex flex-col md:flex-row items-center gap-8 bg-white rounded-2xl p-8">
-            <div className="flex-shrink-0">
-              <div className="w-32 h-40 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg shadow-xl flex items-center justify-center">
-                <BookOpen className="w-16 h-16 text-white" />
-              </div>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-2xl font-bold text-[#1d3557] mb-3">
-                E-book: 50 Dicas Financeiras que Vão Mudar Sua Vida
-              </h3>
-              <p className="text-gray-700 mb-4 leading-relaxed">
-                Guia completo com estratégias práticas validadas por especialistas e IA. Aprenda a economizar, investir e conquistar sua liberdade financeira.
-              </p>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-purple-600">R$ 47</span>
-                  <span className="text-lg text-gray-500 line-through">R$ 97</span>
-                </div>
-                <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                  50% OFF
-                </span>
-              </div>
-              <button
-                onClick={() => window.open('https://pay.kiwify.com.br/seu-link-ebook', '_blank')}
-                className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:shadow-xl transition-all hover:scale-105"
-              >
-                Comprar E-book Agora
-                <ArrowRight size={20} />
-              </button>
-            </div>
-          </div>
+        {/* Garantia */}
+        <div className="bg-gradient-to-r from-[#27ae60] to-[#1d3557] rounded-2xl p-8 text-white text-center">
+          <Shield className="w-16 h-16 mx-auto mb-4" />
+          <h3 className="text-2xl font-bold mb-2">Garantia de 7 Dias</h3>
+          <p className="text-white/90">
+            Não gostou? Devolvemos 100% do seu dinheiro, sem perguntas.
+          </p>
         </div>
       </div>
     </div>
