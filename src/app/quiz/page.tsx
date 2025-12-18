@@ -70,11 +70,9 @@ export default function QuizPage() {
 
     // Verificar se já completou o quiz
     const usuario = JSON.parse(usuarioAtual);
-    const quizCompleto = localStorage.getItem(`quiz_completo_${usuario.email}`);
-    
-    if (quizCompleto === "true") {
-      // Se já completou, redireciona para resultado
-      router.push("/resultado");
+    if (usuario.quiz_completo) {
+      // Se já completou, redireciona para planos
+      router.push("/planos");
     }
   }, [router]);
 
@@ -103,18 +101,32 @@ export default function QuizPage() {
     // Salvar respostas no localStorage
     localStorage.setItem("quizRespostas", JSON.stringify(respostas));
 
-    // Marcar quiz como completo para este usuário
+    // Atualizar usuário para marcar quiz como completo
     const usuarioAtual = localStorage.getItem("usuarioAtual");
     if (usuarioAtual) {
       const usuario = JSON.parse(usuarioAtual);
-      localStorage.setItem(`quiz_completo_${usuario.email}`, "true");
+      usuario.quiz_completo = true;
+      
+      // Atualizar usuário atual
+      localStorage.setItem("usuarioAtual", JSON.stringify(usuario));
+      
+      // Atualizar na lista de usuários
+      const usuariosStr = localStorage.getItem("usuarios");
+      if (usuariosStr) {
+        const usuarios = JSON.parse(usuariosStr);
+        const index = usuarios.findIndex((u: any) => u.email === usuario.email);
+        if (index !== -1) {
+          usuarios[index] = usuario;
+          localStorage.setItem("usuarios", JSON.stringify(usuarios));
+        }
+      }
     }
 
     // Simular processamento
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Redirecionar para página de resultado
-    router.push("/resultado");
+    // Redirecionar para página de planos
+    router.push("/planos");
   };
 
   const respostaAtualSelecionada = respostas[perguntaAtual.id];
@@ -233,7 +245,7 @@ export default function QuizPage() {
                     <>Analisando suas respostas...</>
                   ) : (
                     <>
-                      Ver Meu Plano Personalizado
+                      Ver Planos Disponíveis
                       <ArrowRight size={20} />
                     </>
                   )}

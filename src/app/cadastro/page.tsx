@@ -1,116 +1,105 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { DollarSign, ArrowRight, Loader2, CheckCircle } from "lucide-react";
-import Link from "next/link";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowRight, CheckCircle, Coins, Loader2, AlertCircle } from 'lucide-react';
 
 export default function CadastroPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(false);
-  const [lembrarMe, setLembrarMe] = useState(false);
   const [cadastroData, setCadastroData] = useState({
-    nome: "",
-    email: "",
-    senha: "",
-    telefone: "",
+    nome: '',
+    email: '',
+    senha: ''
   });
-
-  // Verificar se usuário já está logado ao carregar
-  useEffect(() => {
-    const usuarioLogado = localStorage.getItem("usuarioLogado");
-    if (usuarioLogado === "true") {
-      const usuarioAtual = localStorage.getItem("usuarioAtual");
-      if (usuarioAtual) {
-        const usuario = JSON.parse(usuarioAtual);
-        const quizCompleto = localStorage.getItem(`quiz_completo_${usuario.email}`);
-        
-        if (quizCompleto === "true") {
-          // Se já fez o quiz, vai para resultado
-          router.push("/resultado");
-        } else {
-          // Se não fez quiz, vai para o quiz
-          router.push("/quiz");
-        }
-      }
-    }
-  }, [router]);
+  const [lembrarMe, setLembrarMe] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
 
-    // Simular processamento (1 segundo)
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      // Buscar usuários do localStorage
+      const usuariosStr = localStorage.getItem('usuarios');
+      const usuarios = usuariosStr ? JSON.parse(usuariosStr) : [];
 
-    // Salvar dados localmente
-    if (!isLogin) {
-      // CADASTRO: salvar novo usuário
-      const usuarios = JSON.parse(localStorage.getItem("usuarios") || "[]");
-      
-      // Verificar se email já existe
-      const emailExiste = usuarios.find((u: any) => u.email === cadastroData.email);
-      if (emailExiste) {
-        alert("Este e-mail já está cadastrado! Faça login.");
-        setLoading(false);
-        setIsLogin(true);
-        return;
-      }
+      if (isLogin) {
+        // LOGIN: Buscar usuário no localStorage
+        const usuario = usuarios.find(
+          (u: any) => u.email === cadastroData.email && u.senha === cadastroData.senha
+        );
 
-      const novoUsuario = {
-        nome: cadastroData.nome,
-        email: cadastroData.email,
-        senha: cadastroData.senha,
-        telefone: cadastroData.telefone,
-        dataCadastro: new Date().toISOString(),
-      };
+        if (!usuario) {
+          throw new Error('Email ou senha incorretos. Verifique suas credenciais.');
+        }
 
-      usuarios.push(novoUsuario);
-      localStorage.setItem("usuarios", JSON.stringify(usuarios));
-      localStorage.setItem("usuarioAtual", JSON.stringify(novoUsuario));
-      
-      // Marcar como logado se "lembrar-me" estiver ativo
-      if (lembrarMe) {
-        localStorage.setItem("usuarioLogado", "true");
-      }
-
-      setLoading(false);
-      
-      // Redirecionar para o quiz (primeira vez)
-      router.push("/quiz");
-    } else {
-      // LOGIN: verificar credenciais
-      const usuarios = JSON.parse(localStorage.getItem("usuarios") || "[]");
-      const usuarioEncontrado = usuarios.find(
-        (u: any) => u.email === cadastroData.email && u.senha === cadastroData.senha
-      );
-      
-      if (usuarioEncontrado) {
-        localStorage.setItem("usuarioAtual", JSON.stringify(usuarioEncontrado));
+        // Salvar usuário logado
+        localStorage.setItem('usuarioAtual', JSON.stringify(usuario));
         
-        // Marcar como logado se "lembrar-me" estiver ativo
         if (lembrarMe) {
-          localStorage.setItem("usuarioLogado", "true");
+          localStorage.setItem('lembrarMe', 'true');
         }
 
-        setLoading(false);
-
-        // Verificar se já completou o quiz
-        const quizCompleto = localStorage.getItem(`quiz_completo_${usuarioEncontrado.email}`);
+        setError('✅ Login realizado com sucesso! Redirecionando...');
         
-        if (quizCompleto === "true") {
-          // Se já fez o quiz, vai direto para resultado
-          router.push("/resultado");
-        } else {
-          // Se não fez quiz ainda, vai para o quiz
-          router.push("/quiz");
-        }
+        // Redirecionar baseado no status do usuário
+        setTimeout(() => {
+          if (usuario.plano_atual && usuario.plano_atual !== 'gratuito') {
+            // Tem plano pago -> área restrita
+            router.push('/area-restrita');
+          } else {
+            // Não tem plano -> página de planos
+            router.push('/planos');
+          }
+        }, 1000);
       } else {
-        alert("E-mail ou senha incorretos!");
-        setLoading(false);
-        return;
+        // CADASTRO: Validações básicas
+        if (cadastroData.senha.length < 6) {
+          throw new Error('A senha deve ter pelo menos 6 caracteres.');
+        }
+
+        if (!cadastroData.nome.trim()) {
+          throw new Error('Por favor, preencha seu nome completo.');
+        }
+
+        // Verificar se email já existe
+        const emailExiste = usuarios.find((u: any) => u.email === cadastroData.email);
+        if (emailExiste) {
+          throw new Error('Este email já está cadastrado. Faça login ou use outro email.');
+        }
+
+        // Criar novo usuário
+        const novoUsuario = {
+          id: Date.now().toString(),
+          nome: cadastroData.nome,
+          email: cadastroData.email,
+          senha: cadastroData.senha,
+          plano_atual: 'gratuito',
+          quiz_completo: false,
+          created_at: new Date().toISOString()
+        };
+
+        // Adicionar aos usuários
+        usuarios.push(novoUsuario);
+        localStorage.setItem('usuarios', JSON.stringify(usuarios));
+
+        // Salvar como usuário atual
+        localStorage.setItem('usuarioAtual', JSON.stringify(novoUsuario));
+
+        setError('✅ Cadastro realizado com sucesso! Redirecionando para o quiz...');
+        setTimeout(() => {
+          router.push('/quiz');
+        }, 1500);
       }
+    } catch (error: any) {
+      console.error('Erro de autenticação:', error);
+      setError(error.message || 'Erro ao processar solicitação. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,7 +110,7 @@ export default function CadastroPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <DollarSign className="w-8 h-8 text-[#27ae60]" />
+              <Coins className="w-8 h-8 text-[#27ae60]" />
               <span className="text-2xl font-bold text-[#1d3557]">
                 MyMoneyIA
               </span>
@@ -176,6 +165,22 @@ export default function CadastroPage() {
               </button>
             </div>
 
+            {/* Mensagem de erro/sucesso */}
+            {error && (
+              <div className={`mb-6 p-4 border-2 rounded-2xl flex items-start gap-3 ${
+                error.includes('✅') 
+                  ? 'bg-green-50 border-green-200' 
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                  error.includes('✅') ? 'text-green-600' : 'text-red-600'
+                }`} />
+                <p className={`text-sm ${
+                  error.includes('✅') ? 'text-green-800' : 'text-red-800'
+                }`}>{error}</p>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-6">
               {!isLogin && (
                 <div>
@@ -222,31 +227,14 @@ export default function CadastroPage() {
                     setCadastroData({ ...cadastroData, senha: e.target.value })
                   }
                   required
+                  minLength={6}
                   className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-[#27ae60] text-gray-800"
                   placeholder="••••••••"
                 />
+                {!isLogin && (
+                  <p className="text-xs text-gray-500 mt-1">Mínimo de 6 caracteres</p>
+                )}
               </div>
-
-              {/* Campo telefone REMOVIDO do login, apenas no cadastro */}
-              {!isLogin && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Telefone (opcional)
-                  </label>
-                  <input
-                    type="tel"
-                    value={cadastroData.telefone}
-                    onChange={(e) =>
-                      setCadastroData({
-                        ...cadastroData,
-                        telefone: e.target.value,
-                      })
-                    }
-                    className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-[#27ae60] text-gray-800"
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-              )}
 
               {/* Checkbox Lembrar-me */}
               <div className="flex items-center gap-3">
@@ -258,7 +246,7 @@ export default function CadastroPage() {
                   className="w-5 h-5 text-[#27ae60] border-gray-300 rounded focus:ring-[#27ae60]"
                 />
                 <label htmlFor="lembrar-me" className="text-sm text-gray-700 cursor-pointer">
-                  Lembrar-me (não precisar fazer login novamente)
+                  Manter-me conectado
                 </label>
               </div>
 

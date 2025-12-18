@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, CheckCircle, DollarSign, Loader2, Crown, Star, Zap, AlertCircle } from 'lucide-react';
 
-export default function ResultadoPage() {
+export default function PlanosPage() {
   const [loading, setLoading] = useState(false);
   const [resumoQuiz, setResumoQuiz] = useState<string>('');
   const router = useRouter();
@@ -273,7 +273,7 @@ export default function ResultadoPage() {
                   <Zap className="w-8 h-8 text-purple-600" />
                 </div>
                 <h3 className="text-2xl font-bold text-[#1d3557] mb-2">Plano Vitalício</h3>
-                <div className="text-4xl font-bold text-[#27ae60] mb-1">R$ 999,90</div>
+                <div className="text-4xl font-bold text-[#27ae60] mb-1">R$ 697,00</div>
                 <div className="text-gray-500">pagamento único</div>
                 <div className="text-sm text-purple-600 font-semibold mt-2 bg-purple-50 px-3 py-1 rounded-full inline-block">
                   Acesso eterno

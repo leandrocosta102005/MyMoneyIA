@@ -25,10 +25,10 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // Buscar usuários cadastrados
+      // Buscar usuários cadastrados no localStorage
       const usuariosStr = localStorage.getItem("usuarios")
       if (!usuariosStr) {
-        throw new Error("Nenhum usuário cadastrado encontrado")
+        throw new Error("Nenhum usuário cadastrado encontrado. Crie uma conta primeiro.")
       }
 
       const usuarios = JSON.parse(usuariosStr)
@@ -43,18 +43,16 @@ export default function LoginPage() {
 
       // Se "Lembrar-me" estiver marcado, salvar flag
       if (rememberMe) {
-        localStorage.setItem("usuarioLogado", "true")
+        localStorage.setItem("lembrarMe", "true")
       }
 
-      // Verificar se já escolheu um plano (pagou)
-      const planoEscolhido = localStorage.getItem("planoEscolhido")
-      
-      if (planoEscolhido) {
-        // Já pagou - vai para área restrita
-        router.push("/area-restrita")
+      // Redirecionar baseado no status do usuário
+      if (usuario.plano_atual && usuario.plano_atual !== 'gratuito') {
+        // Tem plano pago -> área restrita
+        router.push('/area-restrita')
       } else {
-        // Não pagou - vai para resultado/análise
-        router.push("/resultado")
+        // Não tem plano -> página de planos
+        router.push('/planos')
       }
     } catch (err: any) {
       setError(err.message || "Erro ao fazer login. Verifique suas credenciais.")
